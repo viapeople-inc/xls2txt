@@ -2,21 +2,10 @@
 
 ## Purpose
 
-`xls2txt` and `xsl2csv` allow converting spreadsheet files to text for
+`xls2txt` allows converting spreadsheet files to text for
 compatibility with terminals and command-line utilities (e.g. diff or
-less). Despite the name, they should work with both excel (xls, xlsx
+less). Despite the name, it should work with both excel (xls, xlsx
 or xlsb) and OpenDocument (ods) files.
-
-The two executables provided by this package broadly work the same
-way, returning one line per row separated by a unix newline (`\n`) and
-quoting field values if necessary, they differ only in their *default*
-field (cell) separator:
-
-- `xls2txt` separates cells with a TAB character
-- `xls2csv` uses a comma (`,`)
-
-The tab separator seems like a better default for readability and
-compatibility with various unix utilities.
 
 ## Interface
 
@@ -32,8 +21,7 @@ their default:
 * `--record-separator` (`--rs`, `-r`) is the separator used between
   sheet rows, it defaults to a unix newline for both utilities.
 * `--field-separator` (`--fs`, `f`) is the separator used between
-  sheet cells, it defaults to a TAB character for `xsl2txt` and a
-  COMMA for `xls2csv`.
+  sheet cells, it defaults to a COMMA.
 * `--formula` specifies the *formula display mode*:
   - by default (`cached-value`), formulas are not displayed, if a
     formula cell has a cached value that is displayed, otherwise the
@@ -58,6 +46,24 @@ their default:
     - an error was found in one of the sheet cells
     - an problem occurred while writing data to stdout
 
+## Building for Windows from Linux
+
+To build for Windows, first make sure that the `gcc-mingw-w64-x86-64` package is installed.  If not, you can install it with this command: 
+
+`sudo apt install gcc-mingw-w64-x86-64 -y`
+
+Then add the target with this command:
+
+`rustup target add x86_64-pc-windows-gnu`
+
+Once those two things are set up, you can build for Windows using this command:
+
+`cargo build --release --target x86_64-pc-windows-gnu`
+
+The executable file can then be found here:
+
+ `target/x86_64-pc-windows-gnu/release/xls2txt.exe`
+
 ## Recipes
 
 ### git text conversion
@@ -76,7 +82,7 @@ or `git diff` rather than get an unhelpful "binary files differ":
         *.xlsx diff=spreadsheet
         *.xlsb diff=spreadsheet
 
-3. set `xls2txt` (or `xls2csv`), possibly configured as you desire, as
+3. set `xls2txt`, possibly configured as you desire, as
    the diff text converter:
 
         git config --global diff.spreadsheet.textconv xls2txt

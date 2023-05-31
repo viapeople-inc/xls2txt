@@ -2,6 +2,7 @@
 
 use calamine::{open_workbook_auto, DataType, Reader};
 use clap::{CommandFactory, FromArgMatches, Parser, ValueEnum};
+use encoding_rs::UTF_16LE;
 use guard::guard;
 use std::error::Error;
 use std::fmt::{self, Debug, Display, Formatter, Write};
@@ -54,8 +55,30 @@ impl From<calamine::Error> for Errors {
 }
 
 fn separator_to_byte(s: &str) -> Result<u8, Errors> {
+    if s.len() > 1 {
+        return Err(Errors::InvalidSeparator);
+    }
     let c = s.chars().next().ok_or(Errors::InvalidSeparator)?;
     (c as u32).try_into().map_err(|_| Errors::InvalidSeparator)
+}
+
+fn convert_string_to_utf_8(s: String) -> String {
+    if cfg!(windows) {
+        let second_bytes = s
+            .as_bytes()
+            .chunks(2)
+            .map(|x| if x.len() == 2 { Some(x[1]) } else { None })
+            .collect::<Vec<_>>();
+        if second_bytes.iter().all(|x| x.unwrap_or_default() == 0u8) {
+            let (res, _, had_errors) = UTF_16LE.decode(s.as_bytes());
+            if !had_errors {
+                return res.into_owned();
+            }
+        }
+        s
+    } else {
+        s
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]
@@ -80,21 +103,17 @@ struct App {
     #[arg(short, long, default_value = "1")]
     sheet: String,
     /// Record separator (a single character)
-    #[arg(short, long)]
-    record_separator: String,
+    #[arg(short, long, required = false)]
+    record_separator: Option<String>,
     /// Field separator (a single character)
-    #[arg(short, long)]
-    field_separator: String,
+    #[arg(short, long, required = false)]
+    field_separator: Option<String>,
     /// Whether and when to show formulas
     #[arg(long, value_enum, default_value_t = FormulaMode::CachedValue)]
     formula: FormulaMode,
 }
 
-pub fn run(
-    n: &'static str,
-    default_rs: &'static str,
-    default_fs: &'static str,
-) -> Result<(), Errors> {
+pub fn run(n: &'static str, _: &'static str, _: &'static str) -> Result<(), Errors> {
     let app = App::from_arg_matches(
         &App::command()
             .long_about(&format!(
@@ -105,13 +124,37 @@ requested) to {n} sent to stdout.
 Should be able to convert from (and automatically guess between) \
 XLS, XLSX, XLSB and ODS."
             ))
-            .mut_arg("record_separator", |rs| rs.default_value(default_rs))
-            .mut_arg("field_separator", |fs| fs.default_value(default_fs))
+            .mut_arg("record_separator", |rs| rs.default_value("\n"))
+            .mut_arg("field_separator", |fs| fs.default_value(","))
+            .mut_arg("path", |rs| rs.default_value("data/CycleRole.xls"))
             .get_matches(),
     )
     .unwrap();
 
-    let mut workbook = open_workbook_auto(app.path)?;
+    let record_separator = if let Some(rs) = app.record_separator {
+        if !rs.eq("\\n") {
+            csv::Terminator::Any(separator_to_byte(&rs)?)
+        } else {
+            csv::Terminator::CRLF
+        }
+    } else {
+        csv::Terminator::CRLF
+    };
+
+    let field_separator = if let Some(fs) = app.field_separator {
+        if fs.eq(",") {
+            b','
+        } else if fs.eq("\\t") {
+            b'\t'
+        } else {
+            separator_to_byte(&fs)?
+        }
+    } else {
+        b','
+    };
+
+    let mut workbook: calamine::Sheets<io::BufReader<std::fs::File>> =
+        open_workbook_auto(app.path)?;
 
     // if sheet is a number get corresponding sheet in list, otherwise
     // assume it's a sheet name
@@ -166,10 +209,8 @@ XLS, XLSX, XLSB and ODS."
 
     let stdout = io::stdout();
     let mut out = csv::WriterBuilder::new()
-        .terminator(csv::Terminator::Any(separator_to_byte(
-            &app.record_separator,
-        )?))
-        .delimiter(separator_to_byte(&app.field_separator)?)
+        .terminator(record_separator)
+        .delimiter(field_separator)
         .from_writer(stdout.lock());
 
     let mut contents = vec![String::new(); range.width()];
@@ -181,7 +222,7 @@ XLS, XLSX, XLSB and ODS."
                 // don't bother updating cell for empty
                 DataType::Empty => (),
                 // don't go through fmt for strings
-                DataType::String(s) => cell.push_str(&s),
+                DataType::String(s) => cell.push_str(convert_string_to_utf_8(s).as_str()),
                 rest => write!(cell, "{rest}")
                     .expect("formatting basic types to a string should never fail"),
             };
