@@ -23,12 +23,12 @@ their default:
 * `--field-separator` (`--fs`, `f`) is the separator used between
   sheet cells, it defaults to a COMMA.
 * `--formula` specifies the *formula display mode*:
-  - by default (`cached-value`), formulas are not displayed, if a
+  * by default (`cached-value`), formulas are not displayed, if a
     formula cell has a cached value that is displayed, otherwise the
     cell is empty
-  - `if-empty` will show the cached value if there is one, but will
+  * `if-empty` will show the cached value if there is one, but will
     show the formula if there isn't one
-  - `always` will always display the formula of a formula cell, never
+  * `always` will always display the formula of a formula cell, never
     the cached value
 * the converted data is written to stdout
 * error messages can be written to stdout, including on success
@@ -37,18 +37,26 @@ their default:
   will be reset to default
 * returns `0` if the entire conversion succeeded, `1` otherwise:
 
-    - no input file was provided
-    - the input file was not found or not recognized as a valid
+  * no input file was provided
+  * the input file was not found or not recognized as a valid
       spreadsheet file
-    - the provided record or field separator is invalid (it must be a
+  * the provided record or field separator is invalid (it must be a
       single ascii character)
-    - the specified sheet was not found
-    - an error was found in one of the sheet cells
-    - an problem occurred while writing data to stdout
+  * the specified sheet was not found
+  * an error was found in one of the sheet cells
+  * an problem occurred while writing data to stdout
+
+## Building the executable on Windows
+
+To build the executable from a Windows machine, first make sure that the repo is updated.  Then run the command `cargo build --release`.
+
+The executable file can then be found here:
+
+ `target/release/xls2txt.exe`
 
 ## Building for Windows from Linux
 
-To build for Windows, first make sure that the `gcc-mingw-w64-x86-64` package is installed.  If not, you can install it with this command: 
+To build for Windows, first make sure that the `gcc-mingw-w64-x86-64` package is installed.  If not, you can install it with this command:
 
 `sudo apt install gcc-mingw-w64-x86-64 -y`
 
@@ -93,8 +101,8 @@ or `git diff` rather than get an unhelpful "binary files differ":
 
 * Add support for displaying formulas
 
-  - if there is no cached value for a formula cell
-  - or instead of the cached value
+  * if there is no cached value for a formula cell
+  * or instead of the cached value
 
 ### 1.0.2
 
