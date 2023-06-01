@@ -36,6 +36,8 @@ fn try_repair_utf16le(s: &String) -> Option<String> {
  * them. So, we instead get Rust Strings (which, in Rust, are UTF8) that
  * actually contain UTF16LE encoded data. This function attempts to detect and
  * repair those strings.
+ *
+ * This only works if the utf16 encoded text is ascii.
  */
 pub fn repair_bad_encodings(s: String) -> String {
     try_repair_utf16be(&s)
