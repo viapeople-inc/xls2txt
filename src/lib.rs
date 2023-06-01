@@ -2,6 +2,7 @@
 
 use calamine::{open_workbook_auto, DataType, Reader};
 use clap::{CommandFactory, FromArgMatches, Parser, ValueEnum};
+use encoding_rs::UTF_16LE;
 use guard::guard;
 use std::error::Error;
 use std::fmt::{self, Debug, Display, Formatter, Write};
@@ -59,40 +60,19 @@ fn separator_to_byte(s: &str) -> Result<u8, Errors> {
     (c as u32).try_into().map_err(|_| Errors::InvalidSeparator)
 }
 
-fn _convert_string_to_utf_8(s: String) -> String {
-    let string_bytes = s.as_bytes();
-    
-    //check if the byte array has an even number
-    if string_bytes.len() % 2 == 0 {
-        // the string could be utf-16
-        let utf16_packets = if cfg!(windows) {
-            string_bytes
+fn convert_string_to_utf_8(s: String) -> String {
+    if cfg!(windows) {
+        let second_bytes = s.as_bytes()
             .chunks(2)
-            .map(|e| {
-                println!("{:#?}",e);
-                let val: &[u8; 2] = e.try_into().unwrap();
-                println!("{:#?}",val);
-                u16::from_le_bytes(*val)
-            })
-            .collect::<Vec<_>>()
-        } else {
-            string_bytes
-            .chunks(2)
-            .map(|e: &[u8]| {
-                println!("{:#?}",e);
-                let val: &[u8; 2] = e.try_into().unwrap();
-                println!("{:#?}",val);
-                u16::from_be_bytes(*val)
-            })
-            .collect::<Vec<_>>()
-        };
-    
-        let converted = String::from_utf16_lossy(&utf16_packets);
-        println!("{:?}", converted);
-        println!("{:?}", s);
-        println!("{:?}", string_bytes);
-    
-        converted
+            .map(|x| if x.len() == 2 { Some(x[1]) } else { None })
+            .collect::<Vec<_>>();
+        if second_bytes.iter().all(|x| x.unwrap_or_default() == 0u8 ) {
+            let (res, _, had_errors) = UTF_16LE.decode(s.as_bytes());
+            if !had_errors {
+                return res.into_owned();
+            }
+        }
+        s
     } else {
         s
     }
@@ -242,8 +222,7 @@ XLS, XLSX, XLSB and ODS."
                 // don't bother updating cell for empty
                 DataType::Empty => (),
                 // don't go through fmt for strings
-                // DataType::String(s) => cell.push_str(convert_string_to_utf_8(s).as_str()),
-                DataType::String(s) => cell.push_str(&s),
+                DataType::String(s) => cell.push_str(convert_string_to_utf_8(s).as_str()),
                 rest => write!(cell, "{rest}")
                     .expect("formatting basic types to a string should never fail"),
             };

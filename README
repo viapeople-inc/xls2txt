@@ -46,6 +46,24 @@ their default:
     - an error was found in one of the sheet cells
     - an problem occurred while writing data to stdout
 
+## Building for Windows from Linux
+
+To build for Windows, first make sure that the `gcc-mingw-w64-x86-64` package is installed.  If not, you can install it with this command: 
+
+`sudo apt install gcc-mingw-w64-x86-64 -y`
+
+Then add the target with this command:
+
+`rustup target add x86_64-pc-windows-gnu`
+
+Once those two things are set up, you can build for Windows using this command:
+
+`cargo build --release --target x86_64-pc-windows-gnu`
+
+The executable file can then be found here:
+
+ `target/x86_64-pc-windows-gnu/release/xls2txt.exe`
+
 ## Recipes
 
 ### git text conversion
