@@ -55,18 +55,21 @@ impl From<calamine::Error> for Errors {
 }
 
 fn separator_to_byte(s: &str) -> Result<u8, Errors> {
-    if s.len() > 1 { return Err(Errors::InvalidSeparator) }
+    if s.len() > 1 {
+        return Err(Errors::InvalidSeparator);
+    }
     let c = s.chars().next().ok_or(Errors::InvalidSeparator)?;
     (c as u32).try_into().map_err(|_| Errors::InvalidSeparator)
 }
 
 fn convert_string_to_utf_8(s: String) -> String {
     if cfg!(windows) {
-        let second_bytes = s.as_bytes()
+        let second_bytes = s
+            .as_bytes()
             .chunks(2)
             .map(|x| if x.len() == 2 { Some(x[1]) } else { None })
             .collect::<Vec<_>>();
-        if second_bytes.iter().all(|x| x.unwrap_or_default() == 0u8 ) {
+        if second_bytes.iter().all(|x| x.unwrap_or_default() == 0u8) {
             let (res, _, had_errors) = UTF_16LE.decode(s.as_bytes());
             if !had_errors {
                 return res.into_owned();
@@ -110,11 +113,7 @@ struct App {
     formula: FormulaMode,
 }
 
-pub fn run(
-    n: &'static str,
-    _: &'static str,
-    _: &'static str,
-) -> Result<(), Errors> {
+pub fn run(n: &'static str, _: &'static str, _: &'static str) -> Result<(), Errors> {
     let app = App::from_arg_matches(
         &App::command()
             .long_about(&format!(
@@ -146,15 +145,16 @@ XLS, XLSX, XLSB and ODS."
         if fs.eq(",") {
             b','
         } else if fs.eq("\\t") {
-           b'\t'
+            b'\t'
         } else {
-           separator_to_byte(&fs)?
+            separator_to_byte(&fs)?
         }
     } else {
-       b','
+        b','
     };
 
-    let mut workbook: calamine::Sheets<io::BufReader<std::fs::File>> = open_workbook_auto(app.path)?;
+    let mut workbook: calamine::Sheets<io::BufReader<std::fs::File>> =
+        open_workbook_auto(app.path)?;
 
     // if sheet is a number get corresponding sheet in list, otherwise
     // assume it's a sheet name
