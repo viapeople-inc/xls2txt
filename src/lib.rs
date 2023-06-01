@@ -2,12 +2,14 @@
 
 use calamine::{open_workbook_auto, DataType, Reader};
 use clap::{CommandFactory, FromArgMatches, Parser, ValueEnum};
-use encoding_rs::UTF_16LE;
 use guard::guard;
 use std::error::Error;
 use std::fmt::{self, Debug, Display, Formatter, Write};
 use std::io;
 use std::path::PathBuf;
+use util::encoding;
+
+pub mod util;
 
 pub enum Errors {
     InvalidSeparator,
@@ -60,25 +62,6 @@ fn separator_to_byte(s: &str) -> Result<u8, Errors> {
     }
     let c = s.chars().next().ok_or(Errors::InvalidSeparator)?;
     (c as u32).try_into().map_err(|_| Errors::InvalidSeparator)
-}
-
-fn convert_string_to_utf_8(s: String) -> String {
-    if cfg!(windows) {
-        let second_bytes = s
-            .as_bytes()
-            .chunks(2)
-            .map(|x| if x.len() == 2 { Some(x[1]) } else { None })
-            .collect::<Vec<_>>();
-        if second_bytes.iter().all(|x| x.unwrap_or_default() == 0u8) {
-            let (res, _, had_errors) = UTF_16LE.decode(s.as_bytes());
-            if !had_errors {
-                return res.into_owned();
-            }
-        }
-        s
-    } else {
-        s
-    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]
@@ -222,7 +205,7 @@ XLS, XLSX, XLSB and ODS."
                 // don't bother updating cell for empty
                 DataType::Empty => (),
                 // don't go through fmt for strings
-                DataType::String(s) => cell.push_str(convert_string_to_utf_8(s).as_str()),
+                DataType::String(s) => cell.push_str(encoding::repair_bad_encodings(s).as_str()),
                 rest => write!(cell, "{rest}")
                     .expect("formatting basic types to a string should never fail"),
             };
