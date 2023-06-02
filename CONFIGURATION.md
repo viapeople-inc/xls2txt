@@ -4,7 +4,11 @@ This executable when configured with git allows viewing textual diffs of
  spreadsheet files using `git log` or `git diff` rather than getting
  an unhelpful "binary files differ":
 
-## Configure your system
+## Configuration
+
+The executable has been added to the Deploy Scripts repo and is stored in the `exe` directory.  The scripts have been configured to create the configuration files necessary to set up the integration.
+
+## Configure your system manually
 
 To configure git to work with the executable on your machine, follow these steps:
 
